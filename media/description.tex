@@ -29,17 +29,20 @@ This section relies on definitions from
 \subsection{Virtqueues}\label{sec:Device Types / Media Device / Virtqueues}
 
 \begin{description}
-\item[0] commandq
-\item[1] eventq
+\item[0] commandq - used for driver commands and device responses to these
+commands.
+\item[1] eventq - used for events sent by the device to the driver.
 \end{description}
 
-The command queue is used for driver commands and device responses to these
-commands. The device MUST return the descriptor chains it receives as soon as
+\drivernormative{\subsubsection}{Virtqueues}{Device Types / Media Device / Virtqueues}
+
+The device MUST return the descriptor chains it receives as soon as
 possible, and must never hold to them for indefinite periods of time.
 
-The event queue is used for events sent by the device to the driver. The
-driver MUST re-queue the descriptor chains returned by the device as soon as
-possible, and must never hold on them for indefinite periods of time.
+\drivernormative{\subsubsection}{Virtqueues}{Device Types / Media Device / Virtqueues}
+
+The driver MUST re-queue the descriptor chains returned by the device as soon
+as possible, and must never hold on them for indefinite periods of time.
 
 \subsection{Feature Bits}\label{sec:Device Types / Media Device / Feature Bits}
 
@@ -62,9 +65,8 @@ struct virtio_media_config {
 capabilities as used in
 \href{https://www.kernel.org/doc/html/v4.9/media/uapi/v4l/vidioc-querycap.html#c.v4l2_capability}{struct v4l2_capabilities}.
 Corresponds with the \field{device_caps} field in the \textit{struct video_device}.
-\item[\field{device_type}] (driver-read-only) informs the driver of which type
-of video device it is dealing with. Corresponds with the \field{vfl_devnode_type}
-field of the device.
+\item[\field{device_type}] (driver-read-only) informs the driver of the type
+of the video device. Corresponds with the \field{vfl_devnode_type} field of the device.
 \item[\field{card}] (driver-read-only) name of the device, a unique NUL-terminated
 UTF-8 string. Corresponds with the \field{card} field of the \textit{struct v4l2_capability}.
 \end{description}
@@ -72,8 +74,8 @@ UTF-8 string. Corresponds with the \field{card} field of the \textit{struct v4l2
 \subsection{Device Initialization}
 
 \begin{enumerate}
-\item The driver reads the \field{device_type} and \field{device_type} fields
-from the configuration layout.
+\item The driver reads the \field{device_caps} and \field{device_type} fields
+from the configuration layout to identify the device.
 \item The driver sets up the \field{commandq} and \field{eventq}.
 \item The driver may open a session to use the device and send V4L2 ioctls in
 order to receive more information about the device, such as formats or controls.
@@ -128,6 +130,12 @@ containing the following device-writable field:
 
 The status field can take 0 if the command was successful, or one of the
 standard Linux error codes if it was not.
+
+\drivernormative{\subsubsection}{Device Operation: Command Virtqueue: Sessions}{Device Types / Media Device / Device Operation / Command Virtqueue}
+
+Sessions are how the device is multiplexed, allowing several distinct works to
+take place simultaneously. The driver needs to open a session before it can
+perform any useful operation on the device.
 
 \paragraph{Device Operation: Open device}
 
@@ -227,6 +235,8 @@ For example, the \textit{VIDIOC_G_FMT} is defined as follows:
 This means that its ioctl code is \textit{4}, that its payload is a
 \textit{struct v4l2_format}, and that its direction is \textit{WR} (i.e., the
 payload is written by both the driver and the device).
+See Section \ref{sec:Device Types / Media Device / V4L2 ioctls / Ioctls payload}
+for more information about the direction of ioctls.
 
 The payload layout is always a 64-bit representation of the corresponding
 V4L2 structure, irrespective of the host and guest architecture.
@@ -253,7 +263,7 @@ the reponse structure, or both depending on the direction:
 follows the response in the device-writable section of the descriptor chain.
 \item \textbf{_IOW} is read-only for the device, meaning the payload
 follows the command in the driver-writable section of the descriptor chain.
-\item \textbf{_IORW} is writable by both the device and driver,
+\item \textbf{_IOWR} is writable by both the device and driver,
 meaning the payload must follow both the command in the driver-writable section
 of the descriptor chain, and the response in the device-writable section.
 \end{itemize}
@@ -263,19 +273,23 @@ descriptors that both point to the same buffer. This mimics the behavior of
 V4L2 ioctls where the data is only passed once and used as both input and
 output by the kernel.
 
-\begin{itemize}
-\item In case of success, the device MUST always write the payload in the
-device-writable part of the descriptor chain.
-\item In case of failure, the device is free to write the payload in the
-device-writable part of the descriptor chain or not. Some errors may still
-result in the payload being updated, and in this case the device is expected
-to write the updated payload. If the device has not written the payload after
-an error, the driver MUST assume that the payload has not been modified.
-\end{itemize}
+\devicenormative{\subparagraph}{Device Operation: V4L2 ioctls}{Device Types / Sound Device / Device Operation / V4L2 ioctls}
+
+In case of success of a device-writable ioctl, the device MUST always write the
+payload in the device-writable part of the descriptor chain.
+
+\devicenormative{\subparagraph}{Device Operation: V4L2 ioctls}{Device Types / Sound Device / Device Operation / V4L2 ioctls}
+
+In case of failure of a device-writable ioctl, the device is free to write the
+payload in the device-writable part of the descriptor chain or not. Some errors
+may still result in the payload being updated, and in this case the device is
+expected to write the updated payload. If the device has not written the
+payload after an error, the driver MUST assume that the payload has not been
+modified.
 
 \subparagraph{Handling of pointers in ioctl payload}
 
-A few structures used as ioctl payloads contain pointers the link to further
+A few structures used as ioctl payloads contain pointers to further
 data needed for the ioctl. There are notably:
 
 \begin{itemize}
@@ -324,8 +338,10 @@ A few ioctls are replaced by other, more suitable mechanisms.
 
 \begin{itemize}
 \item \textit{VIDIOC_QUERYCAP} is replaced by reading the configuration area.
-\item \textit{VIDIOC_DQBUF} is replaced by a dedicated event.
-\item \textit{VIDIOC_DQEVENT} is replaced by a dedicated event.
+\item \textit{VIDIOC_DQBUF} is replaced by a dedicated event
+(see \ref{sec:Device Types / Media Device / Device Operation / Dequeue buffer}).
+\item \textit{VIDIOC_DQEVENT} is replaced by a dedicated event
+(see \ref{sec:Device Types / Media Device / Device Operation / Emit an event}).
 \item \textit{VIDIOC_G_JPEGCOMP} and \textit{VIDIOC_S_JPEGCOMP} are deprecated
 and replaced by the controls of the JPEG class.
 \item \textit{VIDIOC_LOG_STATUS} is a guest-only operation and shall not be
@@ -497,6 +513,7 @@ struct virtio_media_event_error {
 \end{description}
 
 \paragraph{Device Operation: Dequeue buffer}
+\label{sec:Device Types / Media Device / Device Operation / Dequeue buffer}
 
 \textbf{VIRTIO_MEDIA_EVT_DQBUF} Signals that a buffer is not being used anymore
 by the device and is returned to the driver.
@@ -529,6 +546,7 @@ is the same that the driver submitted with the \textit{VIDIOC_QBUF}, it would
 be redundant to have it here.
 
 \paragraph{Device Operation: Emit an event}
+\label{sec:Device Types / Media Device / Device Operation / Emit an event}
 
 \textbf{VIRTIO_MEDIA_EVT_EVENT} Signals that a V4L2 event has been emitted for a session.
 
