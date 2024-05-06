@@ -34,7 +34,7 @@ commands.
 \item[1] eventq - used for events sent by the device to the driver.
 \end{description}
 
-\drivernormative{\subsubsection}{Virtqueues}{Device Types / Media Device / Virtqueues}
+\devicenormative{\subsubsection}{Virtqueues}{Device Types / Media Device / Virtqueues}
 
 The device MUST return the descriptor chains it receives as soon as
 possible, and must never hold to them for indefinite periods of time.
@@ -131,7 +131,7 @@ containing the following device-writable field:
 The status field can take 0 if the command was successful, or one of the
 standard Linux error codes if it was not.
 
-\drivernormative{\subsubsection}{Device Operation: Command Virtqueue: Sessions}{Device Types / Media Device / Device Operation / Command Virtqueue}
+\drivernormative{\paragraph}{Device Operation: Command Virtqueue: Sessions}{Device Types / Media Device / Device Operation / Command Virtqueue}
 
 Sessions are how the device is multiplexed, allowing several distinct works to
 take place simultaneously. The driver needs to open a session before it can
@@ -165,7 +165,7 @@ struct virtio_media_resp_open {
 identifier can be used to perform other commands on the session, notably ioctls.
 \end{description}
 
-\devicenormative{\subparagraph}{Device Operation: Open device}{Device Types / Sound Device / Device Operation / Open device}
+\drivernormative{\subparagraph}{Device Operation: Open device}{Device Types / Sound Device / Device Operation / Open device}
 
 \begin{itemize}
 \item Upon success, the driver MUST set a \field{session_id} in \textit{virtio_media_resp_open}
@@ -193,11 +193,9 @@ struct virtio_media_cmd_close {
 \item[\field{session_id}] specifies an identifier for the session to close.
 \end{description}
 
-\devicenormative{\subparagraph}{Device Operation: Close device}{Device Types / Sound Device / Device Operation / Close device}
+\drivernormative{\subparagraph}{Device Operation: Close device}{Device Types / Sound Device / Device Operation / Close device}
 
-\begin{itemize}
-\item The session ID SHALL NOT be used again after queueing this command.
-\end{itemize}
+The session ID SHALL NOT be used again after queueing this command.
 
 \paragraph{Device Operation: V4L2 ioctls}
 
@@ -278,8 +276,6 @@ output by the kernel.
 In case of success of a device-writable ioctl, the device MUST always write the
 payload in the device-writable part of the descriptor chain.
 
-\devicenormative{\subparagraph}{Device Operation: V4L2 ioctls}{Device Types / Sound Device / Device Operation / V4L2 ioctls}
-
 In case of failure of a device-writable ioctl, the device is free to write the
 payload in the device-writable part of the descriptor chain or not. Some errors
 may still result in the payload being updated, and in this case the device is
@@ -337,7 +333,8 @@ and not repeated in the device-writable section, even for WR ioctls.
 A few ioctls are replaced by other, more suitable mechanisms.
 
 \begin{itemize}
-\item \textit{VIDIOC_QUERYCAP} is replaced by reading the configuration area.
+\item \textit{VIDIOC_QUERYCAP} is replaced by reading the configuration area
+(see \ref{sec:Device Types / Media Device / Device Configuration Layout}).
 \item \textit{VIDIOC_DQBUF} is replaced by a dedicated event
 (see \ref{sec:Device Types / Media Device / Device Operation / Dequeue buffer}).
 \item \textit{VIDIOC_DQEVENT} is replaced by a dedicated event
