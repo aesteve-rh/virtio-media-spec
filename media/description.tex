@@ -165,7 +165,7 @@ struct virtio_media_resp_open {
 identifier can be used to perform other commands on the session, notably ioctls.
 \end{description}
 
-\drivernormative{\subparagraph}{Device Operation: Open device}{Device Types / Sound Device / Device Operation / Open device}
+\drivernormative{\subparagraph}{Device Operation: Open device}{Device Types / Media Device / Device Operation / Open device}
 
 \begin{itemize}
 \item Upon success, the driver MUST set a \field{session_id} in \textit{virtio_media_resp_open}
@@ -193,7 +193,7 @@ struct virtio_media_cmd_close {
 \item[\field{session_id}] specifies an identifier for the session to close.
 \end{description}
 
-\drivernormative{\subparagraph}{Device Operation: Close device}{Device Types / Sound Device / Device Operation / Close device}
+\drivernormative{\subparagraph}{Device Operation: Close device}{Device Types / Media Device / Device Operation / Close device}
 
 The session ID SHALL NOT be used again after queueing this command.
 
@@ -271,7 +271,7 @@ descriptors that both point to the same buffer. This mimics the behavior of
 V4L2 ioctls where the data is only passed once and used as both input and
 output by the kernel.
 
-\devicenormative{\subparagraph}{Device Operation: V4L2 ioctls}{Device Types / Sound Device / Device Operation / V4L2 ioctls}
+\devicenormative{\subparagraph}{Device Operation: V4L2 ioctls}{Device Types / Media Device / Device Operation / V4L2 ioctls}
 
 In case of success of a device-writable ioctl, the device MUST always write the
 payload in the device-writable part of the descriptor chain.
@@ -345,7 +345,7 @@ and replaced by the controls of the JPEG class.
 implemented by the host.
 \end{itemize}
 
-\devicenormative{\subparagraph}{Device Operation: V4L2 ioctls}{Device Types / Sound Device / Device Operation / V4L2 ioctls}
+\devicenormative{\subparagraph}{Device Operation: Unsupported ioctls}{Device Types / Media Device / Device Operation / Unsupported ioctls}
 
 If being requested an unsupported ioctl, the device MUST return the same
 response as it would for an unknown ioctl, i.e. \textit{ENOTTY}.
@@ -414,7 +414,7 @@ struct virtio_media_resp_munmap {
 };
 \end{lstlisting}
 
-\devicenormative{\subparagraph}{Device Operation: Unmapping a MMAP buffer}{Device Types / Sound Device / Device Operation / Unmapping a MMAP buffer}
+\devicenormative{\subparagraph}{Device Operation: Unmapping a MMAP buffer}{Device Types / Media Device / Device Operation / Unmapping a MMAP buffer}
 
 The device MUST keep mappings performed using \textit{VIRTIO_MEDIA_CMD_MMAP}
 valid until \textit{VIRTIO_MEDIA_CMD_MUNMAP} is called, even if the buffers or
