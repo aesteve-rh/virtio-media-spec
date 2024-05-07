@@ -37,12 +37,12 @@ commands.
 \devicenormative{\subsubsection}{Virtqueues}{Device Types / Media Device / Virtqueues}
 
 The device MUST return the descriptor chains it receives as soon as
-possible, and must never hold to them for indefinite periods of time.
+possible, and must never hold them for indefinite periods of time.
 
 \drivernormative{\subsubsection}{Virtqueues}{Device Types / Media Device / Virtqueues}
 
 The driver MUST re-queue the descriptor chains returned by the device as soon
-as possible, and must never hold on them for indefinite periods of time.
+as possible, and must never hold them for indefinite periods of time.
 
 \subsection{Feature Bits}\label{sec:Device Types / Media Device / Feature Bits}
 
@@ -67,7 +67,7 @@ capabilities as used in
 Corresponds with the \field{device_caps} field in the \textit{struct video_device}.
 \item[\field{device_type}] (driver-read-only) informs the driver of the type
 of the video device. Corresponds with the \field{vfl_devnode_type} field of the device.
-\item[\field{card}] (driver-read-only) name of the device, a unique NUL-terminated
+\item[\field{card}] (driver-read-only) name of the device, a NUL-terminated
 UTF-8 string. Corresponds with the \field{card} field of the \textit{struct v4l2_capability}.
 \end{description}
 
@@ -318,10 +318,18 @@ these particular pointers only, a list of \textit{struct virtio_media_sg_entry}
 that covers the needed amount of memory for the pointer is used instead of
 using descriptors to map the pointed memory directly.
 
+\begin{lstlisting}
+struct virtio_media_sg_entry {
+	u64 start;
+	u32 len;
+	u32 __padding;
+};
+\end{lstlisting}
+
 For each such pointer to read, the device reads as many SG entries as needed
 to cover the length of the pointed buffer, as described by its parent
-structure (length member of \textit{struct v4l2_buffer} or
-\textit{struct v4l2_plane} for buffer memory, and size member of
+structure (\field{length} member of \textit{struct v4l2_buffer} or
+\textit{struct v4l2_plane} for buffer memory, and \field{size} member of
 \textit{struct v4l2_ext_control} for control data).
 
 Since the device never needs to modify the list of SG entries, it is only
