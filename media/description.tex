@@ -36,13 +36,14 @@ commands.
 
 \devicenormative{\subsubsection}{Virtqueues}{Device Types / Media Device / Virtqueues}
 
-The device MUST return the descriptor chains it receives as soon as
-possible, and must never hold them for indefinite periods of time.
+The device MUST return the descriptor chains it receives on the commandq as
+soon as possible, and must never hold them for indefinite periods of time.
 
 \drivernormative{\subsubsection}{Virtqueues}{Device Types / Media Device / Virtqueues}
 
-The driver MUST re-queue the descriptor chains returned by the device as soon
-as possible, and must never hold them for indefinite periods of time.
+The driver MUST re-queue the descriptor chains returned by the device on the
+eventq as soon as possible, and must never hold them for indefinite periods
+of time.
 
 \subsection{Feature Bits}\label{sec:Device Types / Media Device / Feature Bits}
 
@@ -68,7 +69,8 @@ Corresponds with the \field{device_caps} field in the \textit{struct video_devic
 \item[\field{device_type}] (driver-read-only) informs the driver of the type
 of the video device. Corresponds with the \field{vfl_devnode_type} field of the device.
 \item[\field{card}] (driver-read-only) name of the device, a NUL-terminated
-UTF-8 string. Corresponds with the \field{card} field of the \textit{struct v4l2_capability}.
+ASCII string. Corresponds with the \field{card} field of the \textit{struct v4l2_capability}.
+If all the characters of the field are used, it does not need to be NUL-terminated.
 \end{description}
 
 \subsection{Device Initialization}
@@ -78,7 +80,8 @@ UTF-8 string. Corresponds with the \field{card} field of the \textit{struct v4l2
 from the configuration layout to identify the device.
 \item The driver sets up the \field{commandq} and \field{eventq}.
 \item The driver may open a session to use the device and send V4L2 ioctls in
-order to receive more information about the device, such as formats or controls.
+order to receive more information about the device, such as supported
+formats or controls.
 \end{enumerate}
 
 \subsection{Device Operation}\label{sec:Device Types / Media Device / Device Operation}
@@ -114,14 +117,14 @@ struct virtio_media_resp_header {
 };
 \end{lstlisting}
 
-A request part has, or consists of, a command header \textit{virtio_media_cmd_header}
+A command consists of a command header \textit{virtio_media_cmd_header}
 containing the following device-readable field:
 
 \begin{description}
 \item[\field{cmd}] specifies a device request type (VIRTIO_MEDIA_CMD_*).
 \end{description}
 
-A response part has, or consists of, a response header \textit{virtio_media_resp_header}
+A response consists of a response header \textit{virtio_media_resp_header}
 containing the following device-writable field:
 
 \begin{description}
@@ -142,7 +145,7 @@ perform any useful operation on the device.
 \textbf{VIRTIO_MEDIA_CMD_OPEN} Command for creating a new session.
 
 This is the equivalent of calling \textit{open} on a V4L2 device node.
-The driver users \textit{virtio_media_cmd_open} to send an open request.
+The driver uses \textit{virtio_media_cmd_open} to send an open request.
 
 \begin{lstlisting}
 struct virtio_media_cmd_open {
@@ -165,12 +168,10 @@ struct virtio_media_resp_open {
 identifier can be used to perform other commands on the session, notably ioctls.
 \end{description}
 
-\drivernormative{\subparagraph}{Device Operation: Open device}{Device Types / Media Device / Device Operation / Open device}
+\devicenormative{\subparagraph}{Device Operation: Open device}{Device Types / Media Device / Device Operation / Open device}
 
-\begin{itemize}
-\item Upon success, the driver MUST set a \field{session_id} in \textit{virtio_media_resp_open}
+Upon success, the device MUST set a \field{session_id} in \textit{virtio_media_resp_open}
 to an integer that is NOT used by any other open session.
-\end{itemize}
 
 \paragraph{Device Operation: Close device}
 
@@ -302,8 +303,10 @@ appearance in the structure, and the pointer value itself is ignored by the
 device, which must also return the value initially passed by the driver.
 
 \subparagraph{Handling of pointers to userspace memory}
+\label{sec:Device Types / Media Device / V4L2 ioctls / Userspace memory}
 
-A few pointers are special in that they point to userspace memory. They are:
+A few pointers are special in that they point to userspace memory in the
+original V4L2 specification. They are:
 
 \begin{itemize}
 \item The \field{m.userptr} member of \textit{struct v4l2_buffer} and
@@ -356,7 +359,7 @@ implemented by the host.
 \devicenormative{\subparagraph}{Device Operation: Unsupported ioctls}{Device Types / Media Device / Device Operation / Unsupported ioctls}
 
 If being requested an unsupported ioctl, the device MUST return the same
-response as it would for an unknown ioctl, i.e. \textit{ENOTTY}.
+error response as it would for an unknown ioctl, i.e. \textit{ENOTTY}.
 
 \paragraph{Device Operation: Mapping a MMAP buffer}
 
@@ -379,8 +382,8 @@ struct virtio_media_cmd_mmap {
 can be set if a read-write mapping is desired. Without this flag the mapping
 will be read-only.
 \item[\field{offset}] corresponds to the \field{mem_offset} field of the
-\textit{union virtio_v4l2_plane_mem_backing} for the plane to map. This field
-cane be obtained using the \textit{VIDIOC_QUERYBUF} ioctl.
+\textit{union v4l2_plane} for the plane to map. This field can be obtained
+using the \textit{VIDIOC_QUERYBUF} ioctl.
 \end{description}
 
 The device responds to \textit{VIRTIO_MEDIA_CMD_MMAP} with \textit{virtio_media_resp_mmap}.
@@ -411,7 +414,8 @@ struct virtio_media_cmd_munmap {
 \end{lstlisting}
 
 \begin{description}
-\item[\field{guest_addr}] guest physical address at which the buffer has been previously mapped.
+\item[\field{guest_addr}] guest physical address previously returned by 
+\textit{VIRTIO_MEDIA_CMD_MMAP} at which the buffer has been previously mapped.
 \end{description}
 
 The device responds to \textit{VIRTIO_MEDIA_CMD_MUNMAP} with \textit{virtio_media_resp_munmap}.
@@ -444,14 +448,11 @@ commands to the commandq.
 
 \subparagraph{USERPTR}
 
-In virtio-media, \textit{USERPTR} buffers and provisioned by the guest, just
+In virtio-media, \textit{USERPTR} buffers are provisioned by the guest, just
 like they are by userspace in regular V4L2. Instances of \textit{struct v4l2_buffer}
-and \textit{struct v4l2_plane} of this type are followed by a series of
-descriptors mapping the buffer backing memory in guest space.
-
-For the host convenience, the backing memory must start with a new descriptor
-- this allows the host to easily map the buffer memory to render into it
-instead of having to do a copy.
+and \textit{struct v4l2_plane} of this type are followed by a list of
+\textit{struct virtio_media_sg_entry}. For more information, see
+\ref{sec:Device Types / Media Device / V4L2 ioctls / Userspace memory}
 
 The host must not alter the pointer values provided by the guest, i.e.
 \field{the m.userptr} member of \textit{struct v4l2_buffer} and
@@ -503,7 +504,8 @@ struct virtio_media_event_header {
 \paragraph{Device Operation: Device-side error}
 
 \textbf{VIRTIO_MEDIA_EVT_ERROR} Upon receiving this event, the session
-mentioned in the header is considered corrupted and closed.
+mentioned in the header is considered corrupted and automatically closed by
+the device.
 
 \begin{lstlisting}
 struct virtio_media_event_error {
@@ -538,7 +540,7 @@ struct virtio_media_event_dqbuf {
 
 \begin{description}
 \item[\field{buffer}] \textit{struct v4l2_buffer} describing the buffer that has been dequeued.
-\item[\field{planes}] array of \textit{struct v4l2_plane} containing the plane infromation for multi-planar buffers.
+\item[\field{planes}] array of \textit{struct v4l2_plane} containing the plane information for multi-planar buffers.
 \end{description}
 
 Pointer values in the \textit{struct v4l2_buffer} and \textit{struct v4l2_plane}
