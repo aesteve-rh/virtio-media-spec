@@ -69,7 +69,7 @@ Corresponds with the \field{device_caps} field in the \textit{struct video_devic
 \item[\field{device_type}] (driver-read-only) informs the driver of the type
 of the video device. Corresponds with the \field{vfl_devnode_type} field of the device.
 \item[\field{card}] (driver-read-only) name of the device, a NUL-terminated
-ASCII string. Corresponds with the \field{card} field of the \textit{struct v4l2_capability}.
+UTF-8 string. Corresponds with the \field{card} field of the \textit{struct v4l2_capability}.
 If all the characters of the field are used, it does not need to be NUL-terminated.
 \end{description}
 
