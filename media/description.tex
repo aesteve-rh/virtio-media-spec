@@ -9,14 +9,14 @@ be found under the
 V4L2 is a UAPI that allows a less privileged entity (user-space) to use video
 hardware exposed by a more privileged entity (the kernel). Virtio-media is an
 encapsulation of this API into virtio, turning it into a virtualization API
-for all classes of video devices supported by V4L2, where the host plays the
-role of the kernel and the guest the role of user-space.
+for all classes of video devices supported by V4L2, where the device plays the
+role of the kernel and the driver the role of user-space.
 
-The host is therefore responsible for presenting a virtual device that behaves
-like an actual V4L2 device, which the guest can control.
+The device is therefore responsible for presenting a virtual device that behaves
+like an actual V4L2 device, which the driver can control.
 
 Note that virtio-media does not require the use of a V4L2 device driver or of
-Linux on the host or guest side - V4L2 is only used as a host-guest protocol,
+Linux on any side - V4L2 is only used as a transport protocol,
 and both sides are free to convert it from/to any model that they wish to use.
 
 This section relies on definitions from
@@ -238,7 +238,7 @@ See Section \ref{sec:Device Types / Media Device / V4L2 ioctls / Ioctls payload}
 for more information about the direction of ioctls.
 
 The payload layout is always a 64-bit representation of the corresponding
-V4L2 structure, irrespective of the host and guest architecture.
+V4L2 structure.
 
 The device responds to \textit{VIRTIO_MEDIA_CMD_IOCTL} with \textit{virtio_media_resp_ioctl}.
 
@@ -352,8 +352,8 @@ A few ioctls are replaced by other, more suitable mechanisms.
 (see \ref{sec:Device Types / Media Device / Device Operation / Emit an event}).
 \item \textit{VIDIOC_G_JPEGCOMP} and \textit{VIDIOC_S_JPEGCOMP} are deprecated
 and replaced by the controls of the JPEG class.
-\item \textit{VIDIOC_LOG_STATUS} is a guest-only operation and shall not be
-implemented by the host.
+\item \textit{VIDIOC_LOG_STATUS} is a driver-only operation and shall not be
+implemented by the device.
 \end{itemize}
 
 \devicenormative{\subparagraph}{Device Operation: Unsupported ioctls}{Device Types / Media Device / Device Operation / Unsupported ioctls}
@@ -364,7 +364,7 @@ error response as it would for an unknown ioctl, i.e. \textit{ENOTTY}.
 \paragraph{Device Operation: Mapping a MMAP buffer}
 
 \textbf{VIRTIO_MEDIA_CMD_MMAP} Command for mapping a MMAP buffer into the
-guest's address space.
+driver's address space.
 
 \begin{lstlisting}
 #define VIRTIO_MEDIA_MMAP_FLAG_RW (1 << 0)
@@ -414,7 +414,7 @@ struct virtio_media_cmd_munmap {
 \end{lstlisting}
 
 \begin{description}
-\item[\field{guest_addr}] guest physical address previously returned by 
+\item[\field{guest_addr}] driver's physical address previously returned by 
 \textit{VIRTIO_MEDIA_CMD_MMAP} at which the buffer has been previously mapped.
 \end{description}
 
@@ -430,33 +430,33 @@ struct virtio_media_resp_munmap {
 
 The device MUST keep mappings performed using \textit{VIRTIO_MEDIA_CMD_MMAP}
 valid until \textit{VIRTIO_MEDIA_CMD_MUNMAP} is called, even if the buffers or
-session they belong to are released or closed by the guest.
+session they belong to are released or closed by the driver.
 
 \paragraph{Device Operation: Memory Types}
 
 The semantics of the three V4L2 memory types (\textit{MMAP}, \textit{USERPTR}
-and \textit{DMABUF}) can easily be mapped to a guest/host context.
+and \textit{DMABUF}) can easily be mapped to both driver and device context.
 
 \subparagraph{MMAP}
 
-In virtio-media, \textit{MMAP} buffers are provisioned by the host, just like
+In virtio-media, \textit{MMAP} buffers are provisioned by the device, just like
 they are by the kernel in regular V4L2. Similarly to how userspace can map a
 \textit{MMAP} buffer into its address space using mmap and munmap, the
-virtio-media driver can map host buffers into the guest space by queueing the
+virtio-media driver can map device buffers into the driver space by queueing the
 \textit{struct virtio_media_cmd_mmap} and \textit{struct virtio_media_cmd_munmap}
 commands to the commandq.
 
 \subparagraph{USERPTR}
 
-In virtio-media, \textit{USERPTR} buffers are provisioned by the guest, just
+In virtio-media, \textit{USERPTR} buffers are provisioned by the driver, just
 like they are by userspace in regular V4L2. Instances of \textit{struct v4l2_buffer}
 and \textit{struct v4l2_plane} of this type are followed by a list of
 \textit{struct virtio_media_sg_entry}. For more information, see
 \ref{sec:Device Types / Media Device / V4L2 ioctls / Userspace memory}
 
-The host must not alter the pointer values provided by the guest, i.e.
+The device must not alter the pointer values provided by the driver, i.e.
 \field{the m.userptr} member of \textit{struct v4l2_buffer} and
-\textit{struct v4l2_plane} must be returned to the guest with the same value
+\textit{struct v4l2_plane} must be returned to the driver with the same value
 as it was provided.
 
 \subparagraph{DMABUF}
@@ -470,7 +470,7 @@ leave the V4L2 structure placeholder unchanged.
 Contrary to \textit{USERPTR} buffers, virtio objects UUIDs need to be added in
 both the device-readable and device-writable section of the descriptor chain.
 
-Host-allocated buffers with the \textit{V4L2_MEMORY_MMAP} memory type can also
+Device-allocated buffers with the \textit{V4L2_MEMORY_MMAP} memory type can also
 be exported as virtio objects for use with another virtio device using the
 \textit{VIDIOC_EXPBUF} ioctl. The fd placefolder of \textit{v4l2_exportbuffer}
 means that space for the UUID needs to be reserved right after that structure
@@ -545,7 +545,7 @@ struct virtio_media_event_dqbuf {
 
 Pointer values in the \textit{struct v4l2_buffer} and \textit{struct v4l2_plane}
 are meaningless and must be ignored by the driver. It is recommended that the
-device sets them to NULL in order to avoid leaking potential host addresses.
+device sets them to NULL in order to avoid leaking potential device addresses.
 
 Note that in the case of a \field{USERPTR} buffer, the \textit{struct v4l2_buffer}
 used as event payload is not followed by the buffer memory: since that memory
