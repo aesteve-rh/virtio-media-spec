@@ -367,6 +367,9 @@ error response as it would for an unknown ioctl, i.e. \textit{ENOTTY}.
 \textbf{VIRTIO_MEDIA_CMD_MMAP} Command for mapping a MMAP buffer into the
 driver's address space.
 
+Shared memory region ID 0 is used to map MMAP buffers with
+the \textit{VIRTIO_MEDIA_CMD_MMAP} command.
+
 \begin{lstlisting}
 #define VIRTIO_MEDIA_MMAP_FLAG_RW (1 << 0)
 
@@ -392,13 +395,13 @@ The device responds to \textit{VIRTIO_MEDIA_CMD_MMAP} with \textit{virtio_media_
 \begin{lstlisting}
 struct virtio_media_resp_mmap {
     struct virtio_media_resp_header hdr;
-    u64 addr;
+    u64 offset;
     u64 len;
 };
 \end{lstlisting}
 
 \begin{description}
-\item[\field{addr}] device physical address of the start of the mapping.
+\item[\field{offset}] offset into SHM region ID 0 of the start of the mapping.
 \item[\field{len}] length of the mapping as indicated by the \textit{struct v4l2_plane}
 the buffer belongs to.
 \end{description}
@@ -410,12 +413,12 @@ the buffer belongs to.
 \begin{lstlisting}
 struct virtio_media_cmd_munmap {
     struct virtio_media_cmd_header hdr;
-    u64 guest_addr;
+    u64 offset;
 };
 \end{lstlisting}
 
 \begin{description}
-\item[\field{guest_addr}] driver's physical address previously returned by 
+\item[\field{offset}] offset into SHM region ID 0 previously returned by 
 \textit{VIRTIO_MEDIA_CMD_MMAP} at which the buffer has been previously mapped.
 \end{description}
 
